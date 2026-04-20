@@ -29,6 +29,21 @@
       margin-bottom: 8px;
     }
     .toggle-btn:hover { background: #f6f8fa; }
+	
+	.old-release {
+	  border-top: 1px solid #d0d7de;
+	  padding-top: 12px;
+	  margin-top: 12px;
+	}
+	.old-meta {
+	  color: #656d76;
+	  font-size: 0.9em;
+	  margin-bottom: 8px;
+	}
+	.download-btn.old {
+	  background: #6e7781;  /* 이전 버전은 회색 버튼 */
+	}
+	.download-btn.old:hover { background: #57606a; }
   </style>
 </head>
 <body>
@@ -39,51 +54,82 @@
   <script>
     const GITHUB_USER = 'hrkim91';  // ★ 본인 계정으로 변경
     const REPOS = [
-      { id: 'projectA-firmware', name: 'Project A — ArtNet Controller' },
-      { id: 'projectB-firmware', name: 'Project B — DMX Dimmer' },
+      { id: 'GS1000_CPU_Firmware', name: 'GS1000 CPU Module' },
+      { id: 'GS1000_RD_Firmware', name: 'GS1000 RD Module' },
       { id: 'projectC-firmware', name: 'Project C — LED Driver' },
     ];
 
     async function fetchRelease(repo) {
-      const url = `https://api.github.com/repos/${GITHUB_USER}/${repo.id}/releases/latest`;
-      const res = await fetch(url);
-      if (!res.ok) throw new Error('릴리즈 없음');
-      return res.json();
+	  // latest → releases 로 변경 (전체 목록)
+	  const url = `https://api.github.com/repos/${GITHUB_USER}/${repo.id}/releases`;
+	  const res = await fetch(url);
+	  if (!res.ok) throw new Error('릴리즈 없음');
+	  return res.json();  // 배열로 반환됨
     }
 
-    function renderProject(repo, release) {
-      const date = new Date(release.published_at).toLocaleDateString('ko-KR');
+	function renderProject(repo, releases) {
+	  // 최신 버전 (첫번째 항목)
+	  const latest = releases[0];
+	  const date = new Date(latest.published_at).toLocaleDateString('ko-KR');
 
-      // Markdown → HTML 변환
-      const noteHtml = release.body
-        ? marked.parse(release.body)
-        : '<p style="color:#999">릴리즈 노트 없음</p>';
+	  // 최신 버전 다운로드 버튼
+	  const latestAssets = latest.assets.map(a =>
+		`<a class="download-btn" href="${a.browser_download_url}">⬇ ${a.name}</a>`
+	  ).join('');
 
-      // 다운로드 버튼 목록
-      const assets = release.assets.map(a =>
-        `<a class="download-btn" href="${a.browser_download_url}">⬇ ${a.name}</a>`
-      ).join('');
+	  // 최신 버전 릴리즈 노트
+	  const latestNoteId = `note-${repo.id}-latest`;
+	  const latestNoteHtml = latest.body
+		? marked.parse(latest.body)
+		: '<p style="color:#999">릴리즈 노트 없음</p>';
 
-      const noteId = `note-${repo.id}`;
+	  // 이전 버전 목록 (두번째 항목부터)
+	  const olderReleases = releases.slice(1).map(release => {
+		const oldDate = new Date(release.published_at).toLocaleDateString('ko-KR');
+		const oldNoteId = `note-${repo.id}-${release.tag_name}`;
+		const oldNoteHtml = release.body
+		  ? marked.parse(release.body)
+		  : '<p style="color:#999">릴리즈 노트 없음</p>';
+		const oldAssets = release.assets.map(a =>
+		  `<a class="download-btn old" href="${a.browser_download_url}">⬇ ${a.name}</a>`
+		).join('');
 
-      return `
-        <div class="project">
-          <div class="project-title">${repo.name}</div>
-          <div class="meta">
-            최신버전: <strong>${release.tag_name}</strong>
-            &nbsp;|&nbsp; 배포일: ${date}
-          </div>
+		return `
+		  <div class="old-release">
+			<div class="old-meta">
+			  ${release.tag_name} &nbsp;|&nbsp; ${oldDate}
+			  <button class="toggle-btn" onclick="toggleNote('${oldNoteId}')">릴리즈 노트</button>
+			</div>
+			<div class="release-note" id="${oldNoteId}" style="display:none">${oldNoteHtml}</div>
+			<div>${oldAssets}</div>
+		  </div>`;
+	  }).join('');
 
-          <button class="toggle-btn" onclick="toggleNote('${noteId}')">
-            📋 릴리즈 노트 보기 / 닫기
-          </button>
-          <div class="release-note" id="${noteId}" style="display:none">
-            ${noteHtml}
-          </div>
+	  return `
+		<div class="project">
+		  <div class="project-title">${repo.name}</div>
+		  <div class="meta">
+			최신버전: <strong>${latest.tag_name}</strong>
+			&nbsp;|&nbsp; 배포일: ${date}
+		  </div>
 
-          <div>${assets}</div>
-        </div>`;
-    }
+		  <button class="toggle-btn" onclick="toggleNote('${latestNoteId}')">
+			📋 릴리즈 노트 보기 / 닫기
+		  </button>
+		  <div class="release-note" id="${latestNoteId}" style="display:none">
+			${latestNoteHtml}
+		  </div>
+		  <div style="margin-bottom:16px">${latestAssets}</div>
+
+		  ${olderReleases.length > 0 ? `
+			<details>
+			  <summary style="cursor:pointer; color:#656d76; font-size:0.9em">
+				이전 버전 (${releases.length - 1}개)
+			  </summary>
+			  <div style="margin-top:12px">${olderReleases}</div>
+			</details>` : ''}
+		</div>`;
+	}
 
     function toggleNote(id) {
       const el = document.getElementById(id);
