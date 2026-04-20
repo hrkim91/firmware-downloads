@@ -3,9 +3,111 @@
 <head>
   <meta charset="UTF-8">
   <title>Firmware 다운로드</title>
+  <!-- Markdown → HTML 변환 라이브러리 -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/marked/9.1.6/marked.min.js"></script>
+  <style>
+    body { font-family: sans-serif; max-width: 800px; margin: 40px auto; padding: 0 20px; background: #f6f8fa; }
+    h1 { color: #24292f; }
+    .project { background: white; border: 1px solid #d0d7de; border-radius: 8px; padding: 24px; margin: 16px 0; }
+    .project-title { font-size: 1.3em; font-weight: bold; color: #24292f; margin: 0 0 4px 0; }
+    .meta { color: #656d76; font-size: 0.9em; margin-bottom: 16px; }
+    .release-note { background: #f6f8fa; border-radius: 6px; padding: 16px; margin: 12px 0; font-size: 0.95em; }
+    .release-note h2 { font-size: 1em; margin: 12px 0 4px 0; }
+    .release-note ul { margin: 4px 0; padding-left: 20px; }
+    .release-note li { margin: 2px 0; }
+    .download-btn {
+      display: inline-block; background: #2da44e; color: white;
+      padding: 8px 18px; border-radius: 6px; text-decoration: none;
+      margin: 4px 4px 0 0; font-size: 0.95em;
+    }
+    .download-btn:hover { background: #218838; }
+    .loading { color: #999; text-align: center; padding: 40px; }
+    .error { color: #cc0000; padding: 12px; }
+    .toggle-btn {
+      background: none; border: 1px solid #d0d7de; border-radius: 6px;
+      padding: 4px 12px; cursor: pointer; font-size: 0.85em; color: #656d76;
+      margin-bottom: 8px;
+    }
+    .toggle-btn:hover { background: #f6f8fa; }
+  </style>
 </head>
 <body>
-  <h1>Firmware 다운로드 페이지</h1>
-  <p>준비 중입니다.</p>
+  <h1>⬇ Firmware 다운로드</h1>
+  <p style="color:#656d76">각 프로젝트의 최신 펌웨어를 다운로드하세요.</p>
+  <div id="container"><p class="loading">불러오는 중...</p></div>
+
+  <script>
+    const GITHUB_USER = 'hrkim91';  // ★ 본인 계정으로 변경
+    const REPOS = [
+      { id: 'projectA-firmware', name: 'Project A — ArtNet Controller' },
+      { id: 'projectB-firmware', name: 'Project B — DMX Dimmer' },
+      { id: 'projectC-firmware', name: 'Project C — LED Driver' },
+    ];
+
+    async function fetchRelease(repo) {
+      const url = `https://api.github.com/repos/${GITHUB_USER}/${repo.id}/releases/latest`;
+      const res = await fetch(url);
+      if (!res.ok) throw new Error('릴리즈 없음');
+      return res.json();
+    }
+
+    function renderProject(repo, release) {
+      const date = new Date(release.published_at).toLocaleDateString('ko-KR');
+
+      // Markdown → HTML 변환
+      const noteHtml = release.body
+        ? marked.parse(release.body)
+        : '<p style="color:#999">릴리즈 노트 없음</p>';
+
+      // 다운로드 버튼 목록
+      const assets = release.assets.map(a =>
+        `<a class="download-btn" href="${a.browser_download_url}">⬇ ${a.name}</a>`
+      ).join('');
+
+      const noteId = `note-${repo.id}`;
+
+      return `
+        <div class="project">
+          <div class="project-title">${repo.name}</div>
+          <div class="meta">
+            최신버전: <strong>${release.tag_name}</strong>
+            &nbsp;|&nbsp; 배포일: ${date}
+          </div>
+
+          <button class="toggle-btn" onclick="toggleNote('${noteId}')">
+            📋 릴리즈 노트 보기 / 닫기
+          </button>
+          <div class="release-note" id="${noteId}" style="display:none">
+            ${noteHtml}
+          </div>
+
+          <div>${assets}</div>
+        </div>`;
+    }
+
+    function toggleNote(id) {
+      const el = document.getElementById(id);
+      el.style.display = el.style.display === 'none' ? 'block' : 'none';
+    }
+
+    async function init() {
+      const container = document.getElementById('container');
+      const results = await Promise.allSettled(REPOS.map(fetchRelease));
+
+      container.innerHTML = results.map((result, i) => {
+        if (result.status === 'fulfilled') {
+          return renderProject(REPOS[i], result.value);
+        } else {
+          return `
+            <div class="project">
+              <div class="project-title">${REPOS[i].name}</div>
+              <p class="error">릴리즈 정보를 불러올 수 없습니다.</p>
+            </div>`;
+        }
+      }).join('');
+    }
+
+    init();
+  </script>
 </body>
 </html>
