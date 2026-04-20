@@ -66,9 +66,38 @@
     }
 
 	function renderProject(repo, releases) {
+	  if (!releases || releases.length === 0) {
+		return `
+		  <div class="project">
+			<div class="project-title">${repo.name}</div>
+			<p style="color:#999">등록된 릴리즈가 없습니다.</p>
+		  </div>`;
+	  }
+	  
 	  // 최신 버전 (첫번째 항목)
 	  const latest = releases[0];
-	  const date = new Date(latest.published_at).toLocaleDateString('ko-KR');
+	  // ↓ 날짜 파싱 추가
+	  function getDate(body) {
+		if (!body) return null;
+		const match = body.match(/^date:\s*(\d{4}-\d{2}-\d{2})/m);
+		if (match) {
+		  // md 파일에 명시된 날짜 사용
+		  const [year, month, day] = match[1].split('-');
+		  return `${year}. ${parseInt(month)}. ${parseInt(day)}`;
+		}
+		// date 없으면 published_at 사용
+		return new Date(latest.published_at).toLocaleDateString('ko-KR');
+	  }
+
+	  // ↓ published_at 대신 getDate 사용
+	  const date = getDate(latest.body);
+
+	  // 릴리즈 노트에서 date 줄 제거 후 표시
+	  const bodyWithoutDate = (latest.body || '')
+		.replace(/^date:.*\n?/m, '').trim();
+	  const latestNoteHtml = bodyWithoutDate
+		? marked.parse(bodyWithoutDate)
+		: '<p style="color:#999">릴리즈 노트 없음</p>';
 
 	  // 최신 버전 다운로드 버튼
 	  const latestAssets = latest.assets.map(a =>
