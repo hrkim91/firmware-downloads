@@ -2,170 +2,271 @@
 <html lang="ko">
 <head>
   <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Firmware 다운로드</title>
-  <!-- Markdown → HTML 변환 라이브러리 -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/marked/9.1.6/marked.min.js"></script>
   <style>
-    body { font-family: sans-serif; max-width: 800px; margin: 40px auto; padding: 0 20px; background: #f6f8fa; }
-    h1 { color: #24292f; }
-    .project { background: white; border: 1px solid #d0d7de; border-radius: 8px; padding: 24px; margin: 16px 0; }
-    .project-title { font-size: 1.3em; font-weight: bold; color: #24292f; margin: 0 0 4px 0; }
-    .meta { color: #656d76; font-size: 0.9em; margin-bottom: 16px; }
-    .release-note { background: #f6f8fa; border-radius: 6px; padding: 16px; margin: 12px 0; font-size: 0.95em; }
-    .release-note h2 { font-size: 1em; margin: 12px 0 4px 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      max-width: 860px;
+      margin: 40px auto;
+      padding: 0 20px;
+      background: #f6f8fa;
+      color: #24292f;
+    }
+    h1 { color: #24292f; margin-bottom: 4px; }
+    .subtitle { color: #656d76; margin-bottom: 24px; font-size: 0.95em; }
+
+    /* 프로젝트 카드 */
+    .project {
+      background: white;
+      border: 1px solid #d0d7de;
+      border-radius: 8px;
+      padding: 24px;
+      margin: 16px 0;
+    }
+    .project-title {
+      font-size: 1.3em;
+      font-weight: bold;
+      color: #24292f;
+      margin: 0 0 4px 0;
+    }
+    .meta {
+      color: #656d76;
+      font-size: 0.9em;
+      margin-bottom: 16px;
+    }
+
+    /* 릴리즈 노트 */
+    .release-note {
+      background: #f6f8fa;
+      border: 1px solid #d0d7de;
+      border-radius: 6px;
+      padding: 16px;
+      margin: 12px 0;
+      font-size: 0.95em;
+      line-height: 1.6;
+    }
+    .release-note h2 {
+      font-size: 1em;
+      margin: 12px 0 4px 0;
+      padding-bottom: 4px;
+      border-bottom: 1px solid #d0d7de;
+    }
+    .release-note h2:first-child { margin-top: 0; }
     .release-note ul { margin: 4px 0; padding-left: 20px; }
     .release-note li { margin: 2px 0; }
-    .download-btn {
-      display: inline-block; background: #2da44e; color: white;
-      padding: 8px 18px; border-radius: 6px; text-decoration: none;
-      margin: 4px 4px 0 0; font-size: 0.95em;
-    }
-    .download-btn:hover { background: #218838; }
-    .loading { color: #999; text-align: center; padding: 40px; }
-    .error { color: #cc0000; padding: 12px; }
+    .release-note p { margin: 4px 0; }
+
+    /* 버튼 공통 */
     .toggle-btn {
-      background: none; border: 1px solid #d0d7de; border-radius: 6px;
-      padding: 4px 12px; cursor: pointer; font-size: 0.85em; color: #656d76;
+      background: none;
+      border: 1px solid #d0d7de;
+      border-radius: 6px;
+      padding: 4px 12px;
+      cursor: pointer;
+      font-size: 0.85em;
+      color: #656d76;
       margin-bottom: 8px;
+      margin-right: 4px;
     }
     .toggle-btn:hover { background: #f6f8fa; }
-	
-	.old-release {
-	  border-top: 1px solid #d0d7de;
-	  padding-top: 12px;
-	  margin-top: 12px;
-	}
-	.old-meta {
-	  color: #656d76;
-	  font-size: 0.9em;
-	  margin-bottom: 8px;
-	}
-	.download-btn.old {
-	  background: #6e7781;  /* 이전 버전은 회색 버튼 */
-	}
-	.download-btn.old:hover { background: #57606a; }
+
+    /* 다운로드 버튼 */
+    .download-btn {
+      display: inline-block;
+      background: #2da44e;
+      color: white;
+      padding: 8px 18px;
+      border-radius: 6px;
+      text-decoration: none;
+      margin: 4px 4px 0 0;
+      font-size: 0.95em;
+    }
+    .download-btn:hover { background: #218838; }
+
+    /* 이전 버전 다운로드 버튼 (회색) */
+    .download-btn.old { background: #6e7781; }
+    .download-btn.old:hover { background: #57606a; }
+
+    /* 이전 버전 */
+    .old-release {
+      border-top: 1px solid #d0d7de;
+      padding-top: 12px;
+      margin-top: 12px;
+    }
+    .old-meta {
+      color: #656d76;
+      font-size: 0.9em;
+      margin-bottom: 8px;
+    }
+
+    /* 이전 버전 펼치기 */
+    details { margin-top: 16px; }
+    details summary {
+      cursor: pointer;
+      color: #656d76;
+      font-size: 0.9em;
+      padding: 6px 0;
+      user-select: none;
+    }
+    details summary:hover { color: #24292f; }
+
+    /* 로딩 / 오류 */
+    .loading { color: #999; text-align: center; padding: 40px; }
+    .error-msg { color: #cc0000; padding: 12px; font-size: 0.9em; }
+
+    /* 푸터 */
+    .footer {
+      text-align: center;
+      color: #999;
+      font-size: 0.8em;
+      margin-top: 40px;
+      padding-top: 16px;
+      border-top: 1px solid #d0d7de;
+    }
   </style>
 </head>
 <body>
+
   <h1>⬇ Firmware 다운로드</h1>
-  <p style="color:#656d76">각 프로젝트의 최신 펌웨어를 다운로드하세요.</p>
-  <div id="container"><p class="loading">불러오는 중...</p></div>
+  <p class="subtitle">각 프로젝트의 최신 펌웨어를 다운로드하세요.</p>
+
+  <div id="container">
+    <p class="loading">불러오는 중...</p>
+  </div>
+
+  <div class="footer">
+    페이지 새로고침 시 최신 버전이 자동으로 반영됩니다.
+  </div>
 
   <script>
-    const GITHUB_USER = 'hrkim91';  // ★ 본인 계정으로 변경
+    // ★ 본인 GitHub 계정명으로 변경
+    const GITHUB_USER = 'hrkim91';
+
+    // ★ 프로젝트 repo 목록 (id: GitHub repo명, name: 페이지에 표시될 이름)
     const REPOS = [
-      { id: 'GS1000_CPU_Firmware', name: 'GS1000 CPU Module' }
+      { id: 'GS1000_CPU_Ffirmware',  name: 'GS1000 CPU Module' },
+      // { id: 'projectB-firmware', name: 'Project B — DMX Dimmer' },
+      // { id: 'projectC-firmware', name: 'Project C — LED Driver' },
     ];
 
-    async function fetchRelease(repo) {
-	  // latest → releases 로 변경 (전체 목록)
-	  const url = `https://api.github.com/repos/${GITHUB_USER}/${repo.id}/releases`;
-	  const res = await fetch(url);
-	  if (!res.ok) throw new Error('릴리즈 없음');
-	  return res.json();  // 배열로 반환됨
+    // --------------------------------------------------
+    // 날짜 파싱: md 첫 줄 "date: YYYY-MM-DD" 우선, 없으면 published_at
+    // --------------------------------------------------
+    function parseDate(body, publishedAt) {
+      if (body) {
+        const match = body.match(/^date:\s*(\d{4}-\d{2}-\d{2})/m);
+        if (match) {
+          const [year, month, day] = match[1].split('-');
+          return `${year}. ${parseInt(month)}. ${parseInt(day)}`;
+        }
+      }
+      return new Date(publishedAt).toLocaleDateString('ko-KR');
     }
 
-	function renderProject(repo, releases) {
-	  if (!releases || releases.length === 0) {
-		return `
-		  <div class="project">
-			<div class="project-title">${repo.name}</div>
-			<p style="color:#999">등록된 릴리즈가 없습니다.</p>
-		  </div>`;
-	  }
-	  
-	  // 최신 버전 (첫번째 항목)
-	  const latest = releases[0];
-	  // ↓ 날짜 파싱 추가
-	  function getDate(body) {
-		if (!body) return null;
-		const match = body.match(/^date:\s*(\d{4}-\d{2}-\d{2})/m);
-		if (match) {
-		  // md 파일에 명시된 날짜 사용
-		  const [year, month, day] = match[1].split('-');
-		  return `${year}. ${parseInt(month)}. ${parseInt(day)}`;
-		}
-		// date 없으면 published_at 사용
-		return new Date(latest.published_at).toLocaleDateString('ko-KR');
-	  }
+    // md 본문에서 "date:" 줄 제거
+    function stripDateLine(body) {
+      return (body || '').replace(/^date:.*\n?/m, '').trim();
+    }
 
-	  // ↓ published_at 대신 getDate 사용
-	  const date = getDate(latest.body);
+    // --------------------------------------------------
+    // GitHub API 호출 (전체 릴리즈 목록)
+    // --------------------------------------------------
+    async function fetchReleases(repo) {
+      const url = `https://api.github.com/repos/${GITHUB_USER}/${repo.id}/releases`;
+      const res = await fetch(url);
+      if (!res.ok) throw new Error(`${res.status}`);
+      return res.json();
+    }
 
-	  // 릴리즈 노트에서 date 줄 제거 후 표시
-	  const bodyWithoutDate = (latest.body || '')
-		.replace(/^date:.*\n?/m, '').trim();
-	  const latestNoteHtml = bodyWithoutDate
-		? marked.parse(bodyWithoutDate)
-		: '<p style="color:#999">릴리즈 노트 없음</p>';
+    // --------------------------------------------------
+    // 단일 릴리즈 렌더링 (최신 or 이전 버전 공통)
+    // --------------------------------------------------
+    function renderRelease(release, repoId, isLatest) {
+      const date     = parseDate(release.body, release.published_at);
+      const body     = stripDateLine(release.body);
+      const noteHtml = body ? marked.parse(body) : '<p style="color:#999">릴리즈 노트 없음</p>';
+      const noteId   = `note-${repoId}-${release.tag_name}`;
 
-	  // 최신 버전 다운로드 버튼
-	  const latestAssets = latest.assets.map(a =>
-		`<a class="download-btn" href="${a.browser_download_url}">⬇ ${a.name}</a>`
-	  ).join('');
+      const assets = release.assets.map(a =>
+        `<a class="download-btn${isLatest ? '' : ' old'}" href="${a.browser_download_url}">⬇ ${a.name}</a>`
+      ).join('');
 
-	  // 최신 버전 릴리즈 노트
-	  const latestNoteId = `note-${repo.id}-latest`;
-	  const latestNoteHtml = latest.body
-		? marked.parse(latest.body)
-		: '<p style="color:#999">릴리즈 노트 없음</p>';
+      if (isLatest) {
+        return `
+          <div class="meta">
+            최신버전: <strong>${release.tag_name}</strong>
+            &nbsp;|&nbsp; 배포일: ${date}
+          </div>
+          <button class="toggle-btn" onclick="toggleNote('${noteId}')">
+            📋 릴리즈 노트 보기 / 닫기
+          </button>
+          <div class="release-note" id="${noteId}" style="display:none">
+            ${noteHtml}
+          </div>
+          <div style="margin-bottom:8px">${assets}</div>`;
+      } else {
+        return `
+          <div class="old-release">
+            <div class="old-meta">
+              ${release.tag_name} &nbsp;|&nbsp; ${date}
+              <button class="toggle-btn" onclick="toggleNote('${noteId}')">릴리즈 노트</button>
+            </div>
+            <div class="release-note" id="${noteId}" style="display:none">${noteHtml}</div>
+            <div>${assets}</div>
+          </div>`;
+      }
+    }
 
-	  // 이전 버전 목록 (두번째 항목부터)
-	  const olderReleases = releases.slice(1).map(release => {
-		const oldDate = new Date(release.published_at).toLocaleDateString('ko-KR');
-		const oldNoteId = `note-${repo.id}-${release.tag_name}`;
-		const oldNoteHtml = release.body
-		  ? marked.parse(release.body)
-		  : '<p style="color:#999">릴리즈 노트 없음</p>';
-		const oldAssets = release.assets.map(a =>
-		  `<a class="download-btn old" href="${a.browser_download_url}">⬇ ${a.name}</a>`
-		).join('');
+    // --------------------------------------------------
+    // 프로젝트 카드 렌더링
+    // --------------------------------------------------
+    function renderProject(repo, releases) {
+      // 릴리즈 없음
+      if (!releases || releases.length === 0) {
+        return `
+          <div class="project">
+            <div class="project-title">${repo.name}</div>
+            <p style="color:#999">등록된 릴리즈가 없습니다.</p>
+          </div>`;
+      }
 
-		return `
-		  <div class="old-release">
-			<div class="old-meta">
-			  ${release.tag_name} &nbsp;|&nbsp; ${oldDate}
-			  <button class="toggle-btn" onclick="toggleNote('${oldNoteId}')">릴리즈 노트</button>
-			</div>
-			<div class="release-note" id="${oldNoteId}" style="display:none">${oldNoteHtml}</div>
-			<div>${oldAssets}</div>
-		  </div>`;
-	  }).join('');
+      const latestHtml = renderRelease(releases[0], repo.id, true);
 
-	  return `
-		<div class="project">
-		  <div class="project-title">${repo.name}</div>
-		  <div class="meta">
-			최신버전: <strong>${latest.tag_name}</strong>
-			&nbsp;|&nbsp; 배포일: ${date}
-		  </div>
+      // 이전 버전 목록
+      const olderHtml = releases.slice(1).map(r =>
+        renderRelease(r, repo.id, false)
+      ).join('');
 
-		  <button class="toggle-btn" onclick="toggleNote('${latestNoteId}')">
-			📋 릴리즈 노트 보기 / 닫기
-		  </button>
-		  <div class="release-note" id="${latestNoteId}" style="display:none">
-			${latestNoteHtml}
-		  </div>
-		  <div style="margin-bottom:16px">${latestAssets}</div>
+      const olderSection = releases.length > 1 ? `
+        <details>
+          <summary>이전 버전 (${releases.length - 1}개)</summary>
+          ${olderHtml}
+        </details>` : '';
 
-		  ${olderReleases.length > 0 ? `
-			<details>
-			  <summary style="cursor:pointer; color:#656d76; font-size:0.9em">
-				이전 버전 (${releases.length - 1}개)
-			  </summary>
-			  <div style="margin-top:12px">${olderReleases}</div>
-			</details>` : ''}
-		</div>`;
-	}
+      return `
+        <div class="project">
+          <div class="project-title">${repo.name}</div>
+          ${latestHtml}
+          ${olderSection}
+        </div>`;
+    }
 
+    // --------------------------------------------------
+    // 토글 함수
+    // --------------------------------------------------
     function toggleNote(id) {
       const el = document.getElementById(id);
-      el.style.display = el.style.display === 'none' ? 'block' : 'none';
+      if (el) el.style.display = el.style.display === 'none' ? 'block' : 'none';
     }
 
+    // --------------------------------------------------
+    // 초기화
+    // --------------------------------------------------
     async function init() {
       const container = document.getElementById('container');
-      const results = await Promise.allSettled(REPOS.map(fetchRelease));
+      const results   = await Promise.allSettled(REPOS.map(fetchReleases));
 
       container.innerHTML = results.map((result, i) => {
         if (result.status === 'fulfilled') {
@@ -174,7 +275,9 @@
           return `
             <div class="project">
               <div class="project-title">${REPOS[i].name}</div>
-              <p class="error">릴리즈 정보를 불러올 수 없습니다.</p>
+              <p class="error-msg">
+                릴리즈 정보를 불러올 수 없습니다. (repo명 또는 공개 설정을 확인하세요)
+              </p>
             </div>`;
         }
       }).join('');
