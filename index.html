@@ -464,6 +464,22 @@
     const EMAIL_DOMAIN = '@gds-korea.com';
     let appStarted = false;
 
+    // --------------------------------------------------
+    // 무활동 10분 자동 로그아웃
+    // --------------------------------------------------
+    const IDLE_LIMIT_MS = 10 * 60 * 1000;
+    let idleTimer = null;
+
+    function resetIdleTimer() {
+      if (!auth.currentUser) return;
+      clearTimeout(idleTimer);
+      idleTimer = setTimeout(() => signOut(auth), IDLE_LIMIT_MS);
+    }
+
+    ['mousemove', 'mousedown', 'keydown', 'scroll', 'touchstart'].forEach(evt =>
+      document.addEventListener(evt, resetIdleTimer)
+    );
+
     window.login = async function () {
       const idValue  = document.getElementById('loginEmail').value.trim();
       const email    = idValue.includes('@') ? idValue : idValue + EMAIL_DOMAIN;
@@ -493,9 +509,11 @@
           appStarted = true;
           init();
         }
+        resetIdleTimer();
       } else {
         gate.style.display    = 'flex';
         content.style.display = 'none';
+        clearTimeout(idleTimer);
       }
     });
   </script>
