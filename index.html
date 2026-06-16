@@ -58,6 +58,56 @@
       .sidebar { flex: 0 0 auto; width: 100%; position: static; }
     }
 
+    /* 로그인 게이트 */
+    .login-gate {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 60vh;
+    }
+    .login-box {
+      background: white;
+      border: 1px solid #d0d7de;
+      border-radius: 8px;
+      padding: 32px;
+      width: 320px;
+    }
+    .login-box h2 { margin: 0 0 16px 0; font-size: 1.2em; }
+    .login-box input {
+      width: 100%;
+      box-sizing: border-box;
+      padding: 8px 10px;
+      margin-bottom: 10px;
+      border: 1px solid #d0d7de;
+      border-radius: 6px;
+      font-size: 0.95em;
+    }
+    .login-box button {
+      width: 100%;
+      padding: 10px;
+      background: #2da44e;
+      color: white;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 0.95em;
+    }
+    .login-box button:hover { background: #218838; }
+    .login-error { color: #cc0000; font-size: 0.85em; margin-top: 8px; min-height: 1em; }
+
+    .top-bar { display: flex; align-items: center; justify-content: flex-end; gap: 8px; margin-bottom: -8px; }
+    .user-label { color: #656d76; font-size: 0.85em; }
+    .logout-btn {
+      background: none;
+      border: 1px solid #d0d7de;
+      border-radius: 6px;
+      padding: 4px 12px;
+      cursor: pointer;
+      font-size: 0.85em;
+      color: #656d76;
+    }
+    .logout-btn:hover { background: white; }
+
     /* 프로젝트 카드 */
     .project {
       background: white;
@@ -170,23 +220,41 @@
 </head>
 <body>
 
-  <h1>⬇ Firmware 다운로드</h1>
-  <p class="subtitle">각 프로젝트의 최신 펌웨어를 다운로드하세요.</p>
-
-  <div class="layout">
-    <nav class="sidebar">
-      <div class="sidebar-title">제품 카테고리</div>
-      <ul class="category-list" id="categoryList"></ul>
-    </nav>
-    <main class="content">
-      <div id="container">
-        <p class="loading">불러오는 중...</p>
-      </div>
-    </main>
+  <div id="loginGate" class="login-gate">
+    <div class="login-box">
+      <h2>로그인</h2>
+      <input type="text" id="loginEmail" placeholder="아이디" autocomplete="username">
+      <input type="password" id="loginPassword" placeholder="비밀번호"
+             onkeydown="if(event.key === 'Enter') login()">
+      <button onclick="login()">로그인</button>
+      <div class="login-error" id="loginError"></div>
+    </div>
   </div>
 
-  <div class="footer">
-    페이지 새로고침 시 최신 버전이 자동으로 반영됩니다.
+  <div id="appContent" style="display:none">
+    <div class="top-bar">
+      <span class="user-label" id="userLabel"></span>
+      <button class="logout-btn" onclick="logout()">로그아웃</button>
+    </div>
+
+    <h1>⬇ Firmware 다운로드</h1>
+    <p class="subtitle">각 프로젝트의 최신 펌웨어를 다운로드하세요.</p>
+
+    <div class="layout">
+      <nav class="sidebar">
+        <div class="sidebar-title">제품 카테고리</div>
+        <ul class="category-list" id="categoryList"></ul>
+      </nav>
+      <main class="content">
+        <div id="container">
+          <p class="loading">불러오는 중...</p>
+        </div>
+      </main>
+    </div>
+
+    <div class="footer">
+      페이지 새로고침 시 최신 버전이 자동으로 반영됩니다.
+    </div>
   </div>
 
   <script>
@@ -372,8 +440,64 @@
       repoResults = await Promise.allSettled(REPOS.map(fetchReleases));
       renderContent();
     }
+  </script>
 
-    init();
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+    import {
+      getAuth,
+      signInWithEmailAndPassword,
+      onAuthStateChanged,
+      signOut
+    } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyDeilWoiicrMR10N1on3WsYel8MAVJab1I",
+      authDomain: "firmware-downloads.firebaseapp.com",
+      projectId: "firmware-downloads",
+      storageBucket: "firmware-downloads.firebasestorage.app",
+      messagingSenderId: "1098295611802",
+      appId: "1:1098295611802:web:62142bc17016fe53ffaa23"
+    };
+
+    const auth = getAuth(initializeApp(firebaseConfig));
+    const EMAIL_DOMAIN = '@gds-korea.com';
+    let appStarted = false;
+
+    window.login = async function () {
+      const idValue  = document.getElementById('loginEmail').value.trim();
+      const email    = idValue.includes('@') ? idValue : idValue + EMAIL_DOMAIN;
+      const password = document.getElementById('loginPassword').value;
+      const errorEl  = document.getElementById('loginError');
+      errorEl.textContent = '';
+      try {
+        await signInWithEmailAndPassword(auth, email, password);
+      } catch (err) {
+        errorEl.textContent = '로그인에 실패했습니다. 이메일/비밀번호를 확인하세요.';
+      }
+    };
+
+    window.logout = function () {
+      signOut(auth);
+    };
+
+    onAuthStateChanged(auth, user => {
+      const gate    = document.getElementById('loginGate');
+      const content = document.getElementById('appContent');
+      if (user) {
+        gate.style.display    = 'none';
+        content.style.display = 'block';
+        document.getElementById('userLabel').textContent =
+          (user.email || '').replace(EMAIL_DOMAIN, '');
+        if (!appStarted) {
+          appStarted = true;
+          init();
+        }
+      } else {
+        gate.style.display    = 'flex';
+        content.style.display = 'none';
+      }
+    });
   </script>
 </body>
 </html>
