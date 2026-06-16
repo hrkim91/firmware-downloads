@@ -106,7 +106,7 @@
     .login-box button:hover { background: #218838; }
     .login-error { color: #cc0000; font-size: 0.85em; margin-top: 8px; min-height: 1em; }
 
-    .top-bar { display: flex; align-items: center; justify-content: flex-end; gap: 8px; margin-bottom: -8px; }
+    .top-bar { display: flex; align-items: center; justify-content: flex-end; gap: 8px; margin-bottom: 8px; }
     .user-label { color: #656d76; font-size: 0.85em; }
     .logout-btn {
       background: none;
@@ -301,7 +301,7 @@
       <div class="admin-panel-title">🔔 알림 수신 이메일 설정</div>
       <ul class="notify-email-list" id="notifyEmailList"></ul>
       <div class="notify-add-row">
-        <input type="email" id="newNotifyEmail" placeholder="이메일 추가"
+        <input type="email" id="newNotifyEmail" placeholder="이메일 추가" autocomplete="off"
                onkeydown="if(event.key === 'Enter') addNotifyEmail()">
         <button onclick="addNotifyEmail()">추가</button>
       </div>
@@ -606,8 +606,7 @@
     };
 
     async function applyAdminAccess(uid) {
-      const roleSnap = await getDoc(doc(db, 'roles', uid));
-      console.log('[debug] uid =', uid, ' roleDoc exists =', roleSnap.exists(), ' data =', roleSnap.data());
+      const roleSnap = await getDoc(doc(db, 'users', uid));
       const isAdmin  = roleSnap.exists() && roleSnap.data().admin === true;
       document.getElementById('adminSettingsBtn').style.display = isAdmin ? 'inline-block' : 'none';
       if (isAdmin) await loadNotifySettings();
