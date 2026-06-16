@@ -8,7 +8,7 @@
   <style>
     body {
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-      max-width: 860px;
+      max-width: 1100px;
       margin: 40px auto;
       padding: 0 20px;
       background: #f6f8fa;
@@ -16,6 +16,47 @@
     }
     h1 { color: #24292f; margin-bottom: 4px; }
     .subtitle { color: #656d76; margin-bottom: 24px; font-size: 0.95em; }
+
+    /* 2단 레이아웃: 좌측 카테고리 + 우측 카드 */
+    .layout {
+      display: flex;
+      gap: 24px;
+      align-items: flex-start;
+    }
+    .sidebar {
+      flex: 0 0 220px;
+      background: white;
+      border: 1px solid #d0d7de;
+      border-radius: 8px;
+      overflow: hidden;
+      position: sticky;
+      top: 40px;
+    }
+    .sidebar-title {
+      padding: 14px 16px;
+      font-weight: bold;
+      border-bottom: 1px solid #d0d7de;
+    }
+    .category-list { list-style: none; margin: 0; padding: 8px; }
+    .category-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 10px 12px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 0.95em;
+    }
+    .category-item:hover { background: #f6f8fa; }
+    .category-item.active { background: #2f6fed; color: white; }
+    .category-item.active .category-count { color: white; }
+    .category-count { color: #999; font-size: 0.85em; }
+    .content { flex: 1; min-width: 0; }
+
+    @media (max-width: 700px) {
+      .layout { flex-direction: column; }
+      .sidebar { flex: 0 0 auto; width: 100%; position: static; }
+    }
 
     /* 프로젝트 카드 */
     .project {
@@ -132,8 +173,16 @@
   <h1>⬇ Firmware 다운로드</h1>
   <p class="subtitle">각 프로젝트의 최신 펌웨어를 다운로드하세요.</p>
 
-  <div id="container">
-    <p class="loading">불러오는 중...</p>
+  <div class="layout">
+    <nav class="sidebar">
+      <div class="sidebar-title">제품 카테고리</div>
+      <ul class="category-list" id="categoryList"></ul>
+    </nav>
+    <main class="content">
+      <div id="container">
+        <p class="loading">불러오는 중...</p>
+      </div>
+    </main>
   </div>
 
   <div class="footer">
@@ -144,17 +193,22 @@
     // ★ 본인 GitHub 계정명으로 변경
     const GITHUB_USER = 'hrkim91';
 
-    // ★ 프로젝트 repo 목록 (id: GitHub repo명, name: 페이지에 표시될 이름)
+    // ★ 프로젝트 repo 목록 (id: GitHub repo명, name: 페이지에 표시될 이름, category: 좌측 카테고리)
     const REPOS = [
-      { id: 'GS1000_CPU_Firmware',  name: 'GS1000 CPU Module' },
-	    { id: 'GS1000_RD_Firmware',  name: 'GS1000 RD Module' },
-	    { id: 'GSP120_SPack_Firmware',  name: 'GSP120 SPack Controller' },
-	    { id: 'G6_G12_Firmware',  name: 'G6_G12 Controller' },
-      { id: 'RGBW_Multi_RX_Firmware',  name: 'RGBW Multi RX Driver' },
-      { id: 'RGBW_Multi_TX_Firmware',  name: 'RGBW Multi TX Driver' },
-      { id: 'GR50A_Firmware',  name: 'GR50A Controller' },
-      { id: 'GR50B_Firmware',  name: 'GR50B Controller' }
+      { id: 'GS1000_CPU_Firmware',  name: 'GS1000 CPU Module',       category: 'GS1000' },
+	    { id: 'GS1000_RD_Firmware',  name: 'GS1000 RD Module',        category: 'GS1000' },
+	    { id: 'GSP120_SPack_Firmware',  name: 'GSP120 SPack Controller', category: 'GSP120' },
+	    { id: 'G6_G12_Firmware',  name: 'G6_G12 Controller',          category: 'G6_G12' },
+      { id: 'RGBW_Multi_RX_Firmware',  name: 'RGBW Multi RX Driver',  category: 'RGBW(Multi)' },
+      { id: 'RGBW_Multi_TX_Firmware',  name: 'RGBW Multi TX Driver',  category: 'RGBW(Multi)' },
+      { id: 'GR50A_Firmware',  name: 'GR50A Controller',             category: 'GR50' },
+      { id: 'GR50B_Firmware',  name: 'GR50B Controller',             category: 'GR50' }
     ];
+
+    // 카테고리 목록 (REPOS에 등장하는 순서대로, 중복 제거)
+    const CATEGORIES = [...new Set(REPOS.map(r => r.category))];
+    let activeCategory = CATEGORIES[0];
+    let repoResults = []; // REPOS와 동일한 인덱스로 매칭되는 fetch 결과
 
     // --------------------------------------------------
     // 날짜 파싱: md 첫 줄 "date: YYYY-MM-DD" 우선, 없으면 published_at
@@ -267,25 +321,56 @@
     }
 
     // --------------------------------------------------
+    // 좌측 카테고리 목록 렌더링
+    // --------------------------------------------------
+    function renderSidebar() {
+      const list = document.getElementById('categoryList');
+      list.innerHTML = CATEGORIES.map(cat => {
+        const count = REPOS.filter(r => r.category === cat).length;
+        const activeClass = cat === activeCategory ? ' active' : '';
+        return `
+          <li class="category-item${activeClass}" onclick="selectCategory('${cat}')">
+            <span>${cat}</span><span class="category-count">${count}</span>
+          </li>`;
+      }).join('');
+    }
+
+    // --------------------------------------------------
+    // 선택된 카테고리에 해당하는 카드만 우측에 렌더링
+    // --------------------------------------------------
+    function renderContent() {
+      const container = document.getElementById('container');
+      const html = REPOS.map((repo, i) => {
+        if (repo.category !== activeCategory) return '';
+        const result = repoResults[i];
+        if (!result) return '';
+        if (result.status === 'fulfilled') {
+          return renderProject(repo, result.value);
+        }
+        return `
+          <div class="project">
+            <div class="project-title">${repo.name}</div>
+            <p class="error-msg">
+              릴리즈 정보를 불러올 수 없습니다. (repo명 또는 공개 설정을 확인하세요)
+            </p>
+          </div>`;
+      }).join('');
+      container.innerHTML = html || '<p class="loading">해당 카테고리에 등록된 프로젝트가 없습니다.</p>';
+    }
+
+    function selectCategory(cat) {
+      activeCategory = cat;
+      renderSidebar();
+      renderContent();
+    }
+
+    // --------------------------------------------------
     // 초기화
     // --------------------------------------------------
     async function init() {
-      const container = document.getElementById('container');
-      const results   = await Promise.allSettled(REPOS.map(fetchReleases));
-
-      container.innerHTML = results.map((result, i) => {
-        if (result.status === 'fulfilled') {
-          return renderProject(REPOS[i], result.value);
-        } else {
-          return `
-            <div class="project">
-              <div class="project-title">${REPOS[i].name}</div>
-              <p class="error-msg">
-                릴리즈 정보를 불러올 수 없습니다. (repo명 또는 공개 설정을 확인하세요)
-              </p>
-            </div>`;
-        }
-      }).join('');
+      renderSidebar();
+      repoResults = await Promise.allSettled(REPOS.map(fetchReleases));
+      renderContent();
     }
 
     init();
