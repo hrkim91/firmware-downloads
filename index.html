@@ -373,10 +373,12 @@
     }
 
     // --------------------------------------------------
-    // GitHub API 호출 (전체 릴리즈 목록)
+    // GitHub API 호출 (Cloud Function 프록시 경유, Rate Limit 방지)
     // --------------------------------------------------
+    const PROXY_URL = 'https://us-central1-firmware-downloads.cloudfunctions.net/githubReleases';
+
     async function fetchReleases(repo) {
-      const url = `https://api.github.com/repos/${GITHUB_USER}/${repo.id}/releases`;
+      const url = `${PROXY_URL}?repo=${repo.id}`;
       const res = await fetch(url);
       if (!res.ok) throw new Error(`${res.status}`);
       return res.json();
