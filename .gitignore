@@ -70,3 +70,6 @@ node_modules/
 
 # 민감 정보
 github_tokens.txt
+
+# 작업 로그 (내부 인프라/계정 정보 포함, public repo에 올리지 않음)
+worklog/
